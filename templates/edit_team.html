@@ -1,0 +1,395 @@
+{% extends "base.html" %}
+{% from "components/role_display.html" import role_display %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <!-- 团队基本信息 -->
+        <div class="col-md-6">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h3 class="card-title mb-0">编辑团队信息</h3>
+                </div>
+                <div class="card-body">
+                    <form method="POST">
+                        <div class="mb-3">
+                            <label for="group_name" class="form-label">团队名称</label>
+                            <input type="text" class="form-control" id="group_name" name="group_name" 
+                                   value="{{ team['group_name'] }}" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="notes" class="form-label">备注</label>
+                            <textarea class="form-control" id="notes" name="notes" rows="3">{{ team['notes'] }}</textarea>
+                        </div>
+                        <div class="d-flex justify-content-between">
+                            <a href="{{ url_for('team.team_list') }}" class="btn btn-secondary">返回</a>
+                            <button type="submit" class="btn btn-primary">保存团队信息修改</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- 团队成员管理 -->
+        <div class="col-md-6">
+            <div class="card mb-4">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h3 class="card-title mb-0">团队成员</h3>
+                    <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#addMemberModal">
+                        添加成员
+                    </button>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>姓名</th>
+                                    <th>角色</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for member in members %}
+                                <tr>
+                                    <td>{{ member['name'] }}</td>
+                                    <td>{{ role_display(member['role']) }}</td>
+                                    <td>
+                                        <button type="button" class="btn btn-sm btn-outline-primary me-1" 
+                                                data-bs-toggle="modal" 
+                                                data-bs-target="#editMemberModal"
+                                                data-member-id="{{ member['id'] }}"
+                                                data-member-name="{{ member['name'] }}"
+                                                data-member-role="{{ member['role'] }}">
+                                            编辑
+                                        </button>
+                                        <form action="{{ url_for('team.delete_team_member', team_id=team['id'], member_id=member['id']) }}" 
+                                              method="POST" class="d-inline">
+                                            <button type="submit" class="btn btn-sm btn-outline-danger"
+                                                    onclick="return confirm('确定要移除该成员吗？')">
+                                                移除
+                                            </button>
+                                        </form>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 添加成员模态框 -->
+<div class="modal fade" id="addMemberModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">添加团队成员</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label for="role" class="form-label">角色</label>
+                    <select class="form-select" id="role" name="role" required>
+                        <option value="LEADER">组长</option>
+                        <option value="MEMBER">组员</option>
+                    </select>
+                </div>
+
+                <div id="department-tree-container">
+                    {% from "components/department_tree.html" import render_department_tree %}
+                    {{ render_department_tree(onSelect=updatePersonnelList) }}
+                </div>
+
+                <div class="input-group mb-3" style="display: none;">
+                    <input type="text" class="form-control" id="searchPersonnel" placeholder="请输入人员姓名">
+                    <button class="btn btn-outline-secondary" type="button" id="searchPersonnelBtn">
+                        <i class="bi bi-search"></i> 搜索
+                    </button>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>姓名</th>
+                                <th>部门</th>
+                                <th>职位</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="personnelList">
+                            <!-- 搜索结果将在这里动态显示 -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">关闭</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 编辑成员模态框 -->
+<div class="modal fade" id="editMemberModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">编辑成员角色</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="editMemberForm" method="POST">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">成员姓名</label>
+                        <input type="text" class="form-control" id="editMemberName" readonly>
+                    </div>
+                    <div class="mb-3">
+                        <label for="editMemberRole" class="form-label">角色</label>
+                        <select class="form-select" id="editMemberRole" name="role" required>
+                            <option value="LEADER">组长</option>
+                            <option value="MEMBER">组员</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <button type="submit" class="btn btn-primary">保存修改</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // 防抖函数
+    function debounce(func, wait) {
+        let timeout;
+        return function(...args) {
+            clearTimeout(timeout);
+            timeout = setTimeout(() => func.apply(this, args), wait);
+        };
+    }
+
+    // 更新人员列表
+    async function updatePersonnelList(id) {
+        try {
+            const response = await fetch(`/personnel/${id}`);
+            const result = await response.json();
+            
+            if (!result.success) {
+                return;
+            }
+            
+            const person = result.data;
+            const personnelList = document.getElementById('personnelList');
+            personnelList.innerHTML = `
+                <tr>
+                    <td>${person.name}</td>
+                    <td>${person.department}</td>
+                    <td>${person.position}</td>
+                    <td>
+                        <button type="button" class="btn btn-sm btn-primary select-person" 
+                                data-id="${person.id}" 
+                                data-name="${person.name}">
+                            选择
+                        </button>
+                    </td>
+                </tr>
+            `;
+
+            // 添加选择按钮的点击事件
+            document.querySelector('.select-person').addEventListener('click', function() {
+                const id = this.dataset.id;
+                const name = this.dataset.name;
+                
+                // 创建表单并提交
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.action = "{{ url_for('team.add_team_member', team_id=team['id']) }}";
+                
+                // 添加成员ID
+                const memberIdInput = document.createElement('input');
+                memberIdInput.type = 'hidden';
+                memberIdInput.name = 'member_id';
+                memberIdInput.value = id;
+                form.appendChild(memberIdInput);
+                
+                // 添加角色
+                const roleInput = document.createElement('input');
+                roleInput.type = 'hidden';
+                roleInput.name = 'role';
+                roleInput.value = document.getElementById('role').value;
+                form.appendChild(roleInput);
+                
+                // 提交表单
+                document.body.appendChild(form);
+                form.submit();
+            });
+        } catch (error) {
+            const personnelList = document.getElementById('personnelList');
+            personnelList.innerHTML = `
+                <tr>
+                    <td colspan="4" class="text-center text-danger">
+                        获取人员信息失败，请稍后重试
+                    </td>
+                </tr>
+            `;
+        }
+    }
+
+    // 将updatePersonnelList暴露到全局作用域
+    window.updatePersonnelList = updatePersonnelList;
+
+    // 获取模态框实例
+    const personnelModal = new bootstrap.Modal(document.getElementById('addMemberModal'));
+    
+    // 创建防抖的搜索函数
+    const debouncedSearch = debounce((name) => {
+        searchPersonnel(name);
+    }, 300); // 300ms 的防抖延迟
+
+    // 监听输入事件
+    document.getElementById('searchPersonnel').addEventListener('input', function() {
+        const name = this.value.trim();
+        if (name) {
+            debouncedSearch(name);
+        } else {
+            document.getElementById('personnelList').innerHTML = '';
+        }
+    });
+    
+    // 搜索按钮点击事件
+    document.getElementById('searchPersonnelBtn').addEventListener('click', function() {
+        const searchName = document.getElementById('searchPersonnel').value;
+        searchPersonnel(searchName);
+    });
+    
+    // 回车键触发搜索
+    document.getElementById('searchPersonnel').addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            document.getElementById('searchPersonnelBtn').click();
+        }
+    });
+
+    // 搜索人员函数
+    async function searchPersonnel(name) {
+        try {
+            const response = await fetch(`/personnel/search?name=${encodeURIComponent(name)}`);
+            const result = await response.json();
+            
+            // 清空现有结果
+            const personnelList = document.getElementById('personnelList');
+            personnelList.innerHTML = '';
+            
+            if (result.error) {
+                // 显示错误信息
+                const row = document.createElement('tr');
+                row.innerHTML = `<td colspan="4" class="text-center text-muted">${result.error}</td>`;
+                personnelList.appendChild(row);
+                return;
+            }
+            
+            // 显示搜索结果
+            if (result.data && result.data.length > 0) {
+                result.data.forEach(person => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${person.name}</td>
+                        <td>${person.department}</td>
+                        <td>${person.position}</td>
+                        <td>
+                            <button type="button" class="btn btn-sm btn-primary select-person" 
+                                    data-id="${person.id}" 
+                                    data-name="${person.name}">
+                                选择
+                            </button>
+                        </td>
+                    `;
+                    personnelList.appendChild(row);
+                });
+            } else {
+                // 显示无结果信息
+                const row = document.createElement('tr');
+                row.innerHTML = `<td colspan="4" class="text-center text-muted">未找到相关人员</td>`;
+                personnelList.appendChild(row);
+            }
+
+            // 添加选择按钮的点击事件
+            document.querySelectorAll('.select-person').forEach(button => {
+                button.addEventListener('click', function() {
+                    const id = this.dataset.id;
+                    const name = this.dataset.name;
+                    
+                    // 创建表单并提交
+                    const form = document.createElement('form');
+                    form.method = 'POST';
+                    form.action = "{{ url_for('team.add_team_member', team_id=team['id']) }}";
+                    
+                    // 添加成员ID
+                    const memberIdInput = document.createElement('input');
+                    memberIdInput.type = 'hidden';
+                    memberIdInput.name = 'member_id';
+                    memberIdInput.value = id;
+                    form.appendChild(memberIdInput);
+                    
+                    // 添加角色
+                    const roleInput = document.createElement('input');
+                    roleInput.type = 'hidden';
+                    roleInput.name = 'role';
+                    roleInput.value = document.getElementById('role').value;
+                    form.appendChild(roleInput);
+                    
+                    // 提交表单
+                    document.body.appendChild(form);
+                    form.submit();
+                });
+            });
+        } catch (error) {
+            console.error('搜索人员时出错:', error);
+            const personnelList = document.getElementById('personnelList');
+            personnelList.innerHTML = `
+                <tr>
+                    <td colspan="4" class="text-center text-danger">
+                        搜索出错，请稍后重试
+                    </td>
+                </tr>
+            `;
+        }
+    }
+
+    // 编辑成员模态框相关代码
+    const editMemberModal = document.getElementById('editMemberModal');
+    if (editMemberModal) {
+        editMemberModal.addEventListener('show.bs.modal', function(event) {
+            const button = event.relatedTarget;
+            const memberId = button.getAttribute('data-member-id');
+            const memberName = button.getAttribute('data-member-name');
+            const memberRole = button.getAttribute('data-member-role');
+            
+            // 设置表单action
+            const form = document.getElementById('editMemberForm');
+            form.action = "{{ url_for('team.edit_team_member', team_id=team['id'], member_id=0) }}".replace('/0', '/' + memberId);
+            
+            // 添加成员ID隐藏字段
+            let memberIdInput = form.querySelector('input[name="member_id"]');
+            if (!memberIdInput) {
+                memberIdInput = document.createElement('input');
+                memberIdInput.type = 'hidden';
+                memberIdInput.name = 'member_id';
+                form.appendChild(memberIdInput);
+            }
+            memberIdInput.value = memberId;
+            
+            // 设置成员姓名和角色
+            document.getElementById('editMemberName').value = memberName;
+            document.getElementById('editMemberRole').value = memberRole;
+        });
+    }
+});
+</script>
+{% endblock %} 

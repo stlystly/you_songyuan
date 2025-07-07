@@ -1,0 +1,9 @@
+{% macro role_display(role) %}
+    {% if role == 'LEADER' %}
+        组长
+    {% elif role == 'MEMBER' %}
+        组员
+    {% else %}
+        {{ role }}
+    {% endif %}
+{% endmacro %} 

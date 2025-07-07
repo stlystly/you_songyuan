@@ -1,0 +1,275 @@
+{% extends "base.html" %}
+
+{% block title %}人员资质信息{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>{{ person.name }}的资质</h2>
+        <div>
+            <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addQualificationModal">
+                添加资质
+            </button>
+            <a href="{{ url_for('personnel.personnel_list') }}" class="btn btn-secondary">返回</a>
+        </div>
+    </div>
+
+    <!-- 添加资质 Modal -->
+    <div class="modal fade" id="addQualificationModal" tabindex="-1" aria-labelledby="addQualificationModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="addQualificationModalLabel">添加资质</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="addQualificationForm">
+                        <div class="mb-3">
+                            <label for="qualificationType" class="form-label">资质类型</label>
+                            <select class="form-select" id="qualificationType" name="type" required>
+                                <option value="1">视频</option>
+                                <option value="2">图片</option>
+                                <option value="3">文档</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label for="qualificationTitle" class="form-label">资质标题</label>
+                            <input type="text" class="form-control" id="qualificationTitle" name="title" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="qualificationDescription" class="form-label">资质描述</label>
+                            <input type="text" class="form-control" id="qualificationDescription" name="description" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="qualificationFile" class="form-label">上传文件</label>
+                            <input type="file" class="form-control" id="qualificationFile" required>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <button type="button" class="btn btn-primary" id="saveQualification">保存</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>资质名称</th>
+                                    <th>资源</th>
+                                    <th>类型</th>
+                                    <th>描述</th>
+                                    <th>创建时间</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for qual in qualifications %}
+                                <tr>
+                                    <td>
+                                        {{ qual.title }}
+                                    </td>
+                                    <td>
+                                        {% if qual.type == 1 and qual.source_url %}
+                                        <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#videoModal{{ qual.id }}">
+                                            播放视频
+                                        </button>
+                                        <!-- 视频 Modal -->
+                                        <div class="modal fade" id="videoModal{{ qual.id }}" tabindex="-1" aria-labelledby="videoModalLabel{{ qual.id }}" aria-hidden="true">
+                                            <div class="modal-dialog modal-lg">
+                                                <div class="modal-content">
+                                                    <div class="modal-header">
+                                                        <h5 class="modal-title" id="videoModalLabel{{ qual.id }}">视频播放</h5>
+                                                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                                    </div>
+                                                    <div class="modal-body">
+                                                        <video class="img-fluid w-100" controls>
+                                                            <source src="{{ qual.source_url }}" type="video/mp4">
+                                                            您的浏览器不支持视频播放。
+                                                        </video>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        {% elif qual.type == 2 and qual.source_url %}
+                                        <img src="{{ qual.source_url }}" class="img-fluid" style="max-width: 200px;" alt="资质图片">
+                                        {% elif qual.type == 3 and qual.source_url %}
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if qual.type == 1 %}
+                                            视频
+                                        {% elif qual.type == 2 %}
+                                            图片
+                                        {% else %}
+                                            文档
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ qual.description }}</td>
+                                    <td>{{ qual.created_at }}</td>
+                                    <td>
+                                        <button type="button" class="btn btn-danger btn-sm ms-2" onclick="deleteQualification({{ qual.id }})">删除</button>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// 当 Modal 关闭时停止视频播放
+document.addEventListener('DOMContentLoaded', function() {
+    const videoModals = document.querySelectorAll('[id^="videoModal"]');
+    videoModals.forEach(modal => {
+        modal.addEventListener('hidden.bs.modal', function () {
+            const video = this.querySelector('video');
+            if (video) {
+                video.pause();
+                video.currentTime = 0;
+            }
+        });
+    });
+});
+
+// 添加资质相关代码
+document.addEventListener('DOMContentLoaded', function() {
+    // 保存资质
+    document.getElementById('saveQualification').addEventListener('click', async function() {
+        const form = document.getElementById('addQualificationForm');
+        const type = document.getElementById('qualificationType').value;
+        const title = document.getElementById('qualificationTitle').value;
+        const description = document.getElementById('qualificationDescription').value;
+        const file = document.getElementById('qualificationFile').files[0];
+
+        // 如果是文档类型，不需要上传文件
+        if (type === '3') {
+            try {
+                // 直接添加资质记录
+                const qualificationResponse = await fetch(`/personnel/{{ person.id }}/qualifications`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        type: type,
+                        title: title,
+                        description: description,
+                        source_url: ''  // 文档类型不需要文件URL
+                    })
+                });
+
+                const result = await qualificationResponse.json();
+                if (result.success) {
+                    // 刷新页面
+                    window.location.reload();
+                } else {
+                    throw new Error(result.message);
+                }
+            } catch (error) {
+                alert('添加失败: ' + error.message);
+            }
+            return;
+        }
+
+        // 其他类型需要上传文件
+        if (!file) {
+            alert('请选择文件');
+            return;
+        }
+
+        try {
+            // 1. 先上传文件
+            const formData = new FormData();
+            formData.append('file', file);
+            
+            const fileType = type === '1' ? 'video' : 'image';
+            const uploadResponse = await fetch(`/upload/${fileType}`, {
+                method: 'POST',
+                body: formData
+            });
+            
+            const uploadResult = await uploadResponse.json();
+            if (!uploadResult.success) {
+                throw new Error(uploadResult.message);
+            }
+
+            // 2. 添加资质记录
+            const qualificationResponse = await fetch(`/personnel/{{ person.id }}/qualifications`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    type: type,
+                    title: title,
+                    description: description,
+                    source_url: uploadResult.data.url
+                })
+            });
+
+            const result = await qualificationResponse.json();
+            if (result.success) {
+                // 刷新页面
+                window.location.reload();
+            } else {
+                throw new Error(result.message);
+            }
+        } catch (error) {
+            alert('添加失败: ' + error.message);
+        }
+    });
+
+    // 根据选择的类型显示不同的文件上传提示
+    document.getElementById('qualificationType').addEventListener('change', function() {
+        const fileInput = document.getElementById('qualificationFile');
+        const type = this.value;
+        
+        if (type === '1') {
+            fileInput.accept = 'video/mp4,video/webm,video/avi,video/quicktime';
+            fileInput.required = true;
+        } else if (type === '2') {
+            fileInput.accept = 'image/png,image/jpeg,image/gif';
+            fileInput.required = true;
+        } else {
+            fileInput.required = false;
+            fileInput.value = '';  // 清空文件选择
+        }
+    });
+});
+
+// 删除资质
+async function deleteQualification(qualId) {
+    if (!confirm('确定要删除这个资质吗？')) {
+        return;
+    }
+
+    try {
+        const response = await fetch(`/personnel/qualifications/${qualId}`, {
+            method: 'DELETE'
+        });
+        
+        const result = await response.json();
+        if (result.success) {
+            // 刷新页面
+            window.location.reload();
+        } else {
+            throw new Error(result.message);
+        }
+    } catch (error) {
+        alert('删除失败: ' + error.message);
+    }
+}
+</script>
+{% endblock %} 

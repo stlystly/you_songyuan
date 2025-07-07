@@ -1,0 +1,158 @@
+{% extends "base.html" %}
+{% from "components/select_options.html" import frequency_options, status_options %}
+{% include "components/personnel_selector.html" %}
+{% include "components/team_selector.html" %}
+{% include "components/plan_selector.html" %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title mb-0">编辑演练计划</h3>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('drill.edit_drill', id=drill.id) }}">
+                    <div class="mb-3">
+                        <label for="name" class="form-label">演练名称</label>
+                        <input type="text" class="form-control" id="name" name="name" value="{{ drill.name }}" required>
+                    </div>
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="start_date" class="form-label">开始日期</label>
+                            <input type="date" class="form-control" id="start_date" name="start_date" value="{{ drill.start_date }}" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="end_date" class="form-label">结束日期</label>
+                            <input type="date" class="form-control" id="end_date" name="end_date" value="{{ drill.end_date }}" required>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="frequency" class="form-label">频率</label>
+                        <select class="form-select" id="frequency" name="frequency" required>
+                            {{ frequency_options(drill.frequency) }}
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="executor" class="form-label">执行人</label>
+                        <div class="input-group">
+                            <input type="text" class="form-control" id="executor" name="executor" value="{{ drill.executor_name }}" disabled tabindex="-1">
+                            <button type="button" class="btn btn-outline-secondary" id="selectExecutor" >
+                                <i class="bi bi-search"></i> 修改人员
+                            </button>
+                            <input type="hidden" name="executor_id" value="{{ drill.executor_id }}">
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="team" class="form-label">负责团队</label>
+                        <div class="input-group">
+                            <input type="text" class="form-control" id="team" name="team" value="{{ drill.team_name }}" disabled tabindex="-1">
+                            <button type="button" class="btn btn-outline-secondary" id="selectTeam">
+                                <i class="bi bi-search"></i> 修改团队
+                            </button>
+                            <input type="hidden" name="team_id" value="{{ drill.team_id }}">
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="plan" class="form-label">采用预案</label>
+                        <div class="input-group">
+                            <input type="text" class="form-control" id="plan" name="plan" value="{{ drill.plan_name }}" disabled tabindex="-1">
+                            <button type="button" class="btn btn-outline-secondary" id="selectPlan">
+                                <i class="bi bi-search"></i> 修改预案
+                            </button>
+                            <input type="hidden" name="plan_id" value="{{ drill.plan_id }}">
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="status" class="form-label">状态</label>
+                        <select class="form-select" id="status" name="status" required>
+                            {{ status_options(drill.status) }}
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="creator" class="form-label">创建人</label>
+                        <div class="input-group">
+                            <input type="text" class="form-control" id="creator" name="creator" value="{{ drill.creator_name }}" disabled tabindex="-1">
+                            <button type="button" class="btn btn-outline-secondary" id="selectCreator">
+                                <i class="bi bi-search"></i> 修改人员
+                            </button>
+                            <input type="hidden" name="creator_id" value="{{ drill.creator_id }}">
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="description" class="form-label">详细描述</label>
+                        <textarea class="form-control" id="description" name="description" rows="3">{{ drill.description }}</textarea>
+                    </div>
+
+                    <div class="d-flex justify-content-between">
+                        <a href="{{ url_for('drill.drill_list') }}" class="btn btn-secondary">返回</a>
+                        <button type="submit" class="btn btn-primary">保存修改</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // 初始化人员选择器
+    const personnelSelector = initPersonnelSelector({
+        onSelect: function(id, name) {
+            const type = document.getElementById('personnelModal').dataset.type;
+            if (type === 'executor') {
+                document.querySelector('input[name="executor_id"]').value = id;
+                document.getElementById('executor').value = name;
+            } else if (type === 'creator') {
+                document.querySelector('input[name="creator_id"]').value = id;
+                document.getElementById('creator').value = name;
+            }
+        }
+    });
+
+    // 初始化团队选择器
+    const teamSelector = initTeamSelector({
+        onSelect: function(id, name) {
+            document.querySelector('input[name="team_id"]').value = id;
+            document.getElementById('team').value = name;
+        }
+    });
+
+    // 初始化预案选择器
+    const planSelector = initPlanSelector({
+        onSelect: function(id, name) {
+            document.querySelector('input[name="plan_id"]').value = id;
+            document.getElementById('plan').value = name;
+        }
+    });
+    
+    // 点击修改执行人按钮时显示模态框
+    document.getElementById('selectExecutor').addEventListener('click', function() {
+        personnelSelector.show('executor');
+    });
+
+    // 点击修改创建人按钮时显示模态框
+    document.getElementById('selectCreator').addEventListener('click', function() {
+        personnelSelector.show('creator');
+    });
+
+    // 点击修改团队按钮时显示模态框
+    document.getElementById('selectTeam').addEventListener('click', function() {
+        teamSelector.show();
+    });
+
+    // 点击修改预案按钮时显示模态框
+    document.getElementById('selectPlan').addEventListener('click', function() {
+        planSelector.show();
+    });
+});
+</script>
+{% endblock %} 

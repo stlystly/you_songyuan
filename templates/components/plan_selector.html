@@ -1,0 +1,170 @@
+<!-- 预案选择模态框 -->
+<div class="modal fade" id="planModal" tabindex="-1" aria-labelledby="planModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="planModalLabel">选择预案</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="input-group mb-3">
+                    <input type="text" class="form-control" id="searchPlan" placeholder="请输入预案名称">
+                    <button class="btn btn-outline-secondary" type="button" id="searchPlanBtn">
+                        <i class="bi bi-search"></i> 搜索
+                    </button>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>预案名称</th>
+                                <th>描述</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="planList">
+                            <!-- 搜索结果将在这里动态显示 -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">关闭</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// 防抖函数
+function debounce(func, wait) {
+    let timeout;
+    return function(...args) {
+        clearTimeout(timeout);
+        timeout = setTimeout(() => func.apply(this, args), wait);
+    };
+}
+
+// 初始化预案选择器
+function initPlanSelector(options = {}) {
+    const {
+        modalId = 'planModal',
+        searchInputId = 'searchPlan',
+        searchButtonId = 'searchPlanBtn',
+        resultListId = 'planList',
+        onSelect = null
+    } = options;
+
+    // 获取模态框实例
+    const planModal = new bootstrap.Modal(document.getElementById(modalId));
+    const searchInput = document.getElementById(searchInputId);
+    const searchBtn = document.getElementById(searchButtonId);
+    
+    // 创建防抖的搜索函数
+    const debouncedSearch = debounce((name) => {
+        searchPlan(name);
+    }, 300); // 300ms 的防抖延迟
+
+    // 监听输入事件
+    searchInput.addEventListener('input', function() {
+        const name = this.value.trim();
+        if (name) {
+            debouncedSearch(name);
+        } else {
+            document.getElementById(resultListId).innerHTML = '';
+        }
+    });
+    
+    // 搜索预案函数
+    async function searchPlan(name) {
+        try {
+            const response = await fetch(`/plan/search?name=${encodeURIComponent(name)}`);
+            const result = await response.json();
+            
+            const planList = document.getElementById(resultListId);
+            planList.innerHTML = '';
+            
+            if (result.error) {
+                const row = document.createElement('tr');
+                row.innerHTML = `<td colspan="3" class="text-center text-muted">${result.error}</td>`;
+                planList.appendChild(row);
+                return;
+            }
+            
+            if (result.data && result.data.length > 0) {
+                result.data.forEach(plan => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${plan.name}</td>
+                        <td>${plan.description || ''}</td>
+                        <td>
+                            <button type="button" class="btn btn-sm btn-primary select-plan" 
+                                    data-id="${plan.id}" 
+                                    data-name="${plan.name}">
+                                选择
+                            </button>
+                        </td>
+                    `;
+                    planList.appendChild(row);
+                });
+            } else {
+                const row = document.createElement('tr');
+                row.innerHTML = `<td colspan="3" class="text-center text-muted">未找到相关预案</td>`;
+                planList.appendChild(row);
+            }
+
+            document.querySelectorAll('.select-plan').forEach(button => {
+                button.addEventListener('click', function() {
+                    const id = this.dataset.id;
+                    const name = this.dataset.name;
+                    
+                    if (typeof onSelect === 'function') {
+                        onSelect(id, name);
+                    }
+                    
+                    searchInput.value = '';
+                    document.getElementById(resultListId).innerHTML = '';
+                    planModal.hide();
+                });
+            });
+        } catch (error) {
+            console.error('搜索预案时出错:', error);
+            const planList = document.getElementById(resultListId);
+            planList.innerHTML = `
+                <tr>
+                    <td colspan="3" class="text-center text-danger">
+                        搜索出错，请稍后重试
+                    </td>
+                </tr>
+            `;
+        }
+    }
+
+    // 监听搜索按钮点击
+    searchBtn.addEventListener('click', function() {
+        const name = searchInput.value.trim();
+        if (name) {
+            searchPlan(name);
+        }
+    });
+
+    // 监听回车键
+    searchInput.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            const name = this.value.trim();
+            if (name) {
+                searchPlan(name);
+            }
+        }
+    });
+
+    return {
+        show: () => {
+            searchInput.value = '';
+            document.getElementById(resultListId).innerHTML = '';
+            planModal.show();
+        },
+        hide: () => planModal.hide()
+    };
+}
+</script> 

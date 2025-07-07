@@ -1,0 +1,59 @@
+{
+    "python": {
+        "formatter": "black",
+        "linter": "flake8",
+        "type_checker": "mypy"
+    },
+    "sql": {
+        "formatter": "sqlformat"
+    },
+    "editor": {
+        "tabSize": 4,
+        "insertSpaces": true,
+        "trimTrailingWhitespace": true,
+        "insertFinalNewline": true
+    },
+    "files": {
+        "exclude": [
+            "**/__pycache__",
+            "**/.git",
+            "**/venv",
+            "**/.env",
+            "**/*.pyc",
+            "**/*.pyo",
+            "**/*.pyd",
+            "**/.Python",
+            "**/env",
+            "**/env.bak",
+            "**/venv.bak",
+            "**/.idea",
+            "**/.vscode",
+            "**/*.swp",
+            "**/*.swo",
+            "**/.DS_Store"
+        ]
+    },
+    "search": {
+        "exclude": [
+            "**/__pycache__",
+            "**/.git",
+            "**/venv",
+            "**/.env",
+            "**/*.pyc",
+            "**/*.pyo",
+            "**/*.pyd",
+            "**/.Python",
+            "**/env",
+            "**/env.bak",
+            "**/venv.bak",
+            "**/.idea",
+            "**/.vscode",
+            "**/*.swp",
+            "**/*.swo",
+            "**/.DS_Store"
+        ]
+    },
+    "ai": {
+        "language": "zh-CN"
+    }
+} 

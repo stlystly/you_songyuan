@@ -1,0 +1,182 @@
+{% extends "base.html" %}
+{% from "components/select_options.html" import status_display %}
+
+{% block content %}
+<div class="mb-4">
+    <div class="d-flex justify-content-between align-items-center">
+        <h2>演练计划列表</h2>
+        <a href="{{ url_for('drill.add_drill') }}" class="btn btn-primary">
+            <i class="bi bi-plus-lg"></i> 添加演练
+        </a>
+    </div>
+</div>
+
+<div class="table-responsive">
+    <table class="table table-striped table-hover">
+        <thead>
+            <tr>
+                <th>演练ID</th>
+                <th>演练名称</th>
+                <th>开始/截止日期</th>
+                <th>频率</th>
+                <th>演练预案</th>
+                <th>负责团队</th>
+                <th>状态</th>
+                <!-- <th>资质匹配</th> -->
+                <th>创建人</th>
+                <th>创建时间</th>
+                <th>操作</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for drill in drills %}
+            <tr>
+                <td>{{ drill.id }}</td>
+                <td>{{ drill.name }}</td>
+                <td>{{ drill.start_date }} - {{ drill.end_date }}</td>
+                <td>{{ drill.frequency }}</td>
+                <td>
+                    {{ drill.plan_name }}
+                    <input type="hidden" name="plan_id" value="{{ drill.plan_id }}">
+                </td>
+                <td>
+                    {{ drill.team_name }}
+                    <input type="hidden" name="team_id" value="{{ drill.team_id }}">
+                </td>
+                <td>
+                    <span class="badge drill-status {% if drill.status == 'pending' %}bg-warning
+                                     {% elif drill.status == 'in_progress' %}bg-primary
+                                     {% elif drill.status == 'completed' %}bg-success
+                                     {% else %}bg-danger{% endif %}">
+                        {{ status_display(drill.status) }}
+                    </span>
+                </td>
+                <!-- <td>
+                    <button type="button" class="btn btn-info btn-sm py-0 px-2" style="font-size: 0.8rem;" 
+                            onclick="showQualificationMatch({{ drill.id }})">
+                        <i class="bi"></i> 查看资质
+                    </button>
+                </td> -->
+                <td>
+                    {{ drill.creator_name }}
+                    <input type="hidden" name="creator_id" value="{{ drill.creator_id }}">
+                </td>
+                <td>
+                    {{ drill.created_at }}
+                </td>
+                <td>
+                    <div class="btn-group">
+                        <a href="{{ url_for('drill.edit_drill', id=drill.id) }}" class="btn btn-sm btn-outline-primary">编辑</a>
+                        <form method="POST" action="{{ url_for('drill.delete_drill', id=drill.id) }}" style="display: inline;">
+                            <button type="button" class="btn btn-sm btn-outline-danger" 
+                                    onclick="confirmDelete(this.form)">删除</button>
+                        </form>
+                    </div>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<!-- 资质匹配Modal -->
+<div class="modal fade" id="qualificationMatchModal" tabindex="-1" aria-labelledby="qualificationMatchModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="qualificationMatchModalLabel">资质匹配情况</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="table-responsive">
+                    <table class="table table-bordered">
+                        <thead>
+                            <tr>
+                                <th style="width: 40%">预案资质</th>
+                                <th style="width: 60%">具有资质的人员</th>
+                            </tr>
+                        </thead>
+                        <tbody id="qualificationMatchTableBody">
+                            <!-- 数据将通过JavaScript动态填充 -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function confirmDelete(form) {
+    if (confirm('确定要删除这个演练计划吗？')) {
+        form.submit();
+    }
+}
+
+// 显示资质匹配情况
+async function showQualificationMatch(drillId) {
+    try {
+        const response = await fetch(`/drill/${drillId}/qualification_match`);
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const result = await response.json();
+        
+        if (!result.success) {
+            alert(result.message);
+            return;
+        }
+        
+        const tbody = document.getElementById('qualificationMatchTableBody');
+        tbody.innerHTML = '';
+        
+        // 检查qualifications是否存在且不为空
+        if (!result.data.qualifications || result.data.qualifications.length === 0) {
+            const row = document.createElement('tr');
+            const cell = document.createElement('td');
+            cell.colSpan = 2;
+            cell.className = 'text-center text-muted';
+            cell.textContent = '该预案暂无资质要求';
+            row.appendChild(cell);
+            tbody.appendChild(row);
+            
+            // 显示modal
+            const modal = new bootstrap.Modal(document.getElementById('qualificationMatchModal'));
+            modal.show();
+            return;
+        }
+        
+        result.data.qualifications.forEach(qual => {
+            const row = document.createElement('tr');
+            
+            // 资质列
+            const qualCell = document.createElement('td');
+            qualCell.textContent = qual.title;
+            row.appendChild(qualCell);
+            
+            // 人员列
+            const membersCell = document.createElement('td');
+            if (!qual.matched_members || qual.matched_members.length === 0) {
+                membersCell.innerHTML = '<span class="text-danger">暂无人员具有此资质</span>';
+            } else {
+                const membersList = qual.matched_members.map(member => 
+                    `<span class="badge bg-success me-1">${member.name} (${member.role})</span>`
+                ).join('');
+                membersCell.innerHTML = membersList;
+            }
+            row.appendChild(membersCell);
+            
+            tbody.appendChild(row);
+        });
+        
+        // 显示modal
+        const modal = new bootstrap.Modal(document.getElementById('qualificationMatchModal'));
+        modal.show();
+        
+    } catch (error) {
+        console.error('获取资质匹配情况失败:', error);
+        alert('获取资质匹配情况失败，请稍后重试');
+    }
+}
+</script>
+{% endblock %} 

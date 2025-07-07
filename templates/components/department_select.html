@@ -1,0 +1,229 @@
+{% macro render_department_select(initial_department, initial_department_name='', instance_id='department-select') %}
+<div id="{{ instance_id }}" 
+     v-cloak
+     data-initial-department="{{ initial_department|default('null') }}"
+     data-initial-department-name="{{ initial_department_name|default('null') }}">
+    <div v-if="loading" class="text-center p-3">
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">加载中...</span>
+        </div>
+        <div>正在加载部门数据...</div>
+    </div>
+    <div v-else>
+        <treeselect
+            v-model="selectedDepartment"
+            :options="departmentOptions"
+            :multiple="false"
+            :clearable="true"
+            :disable-branch-nodes="false"
+            :show-count="true"
+            :normalizer="normalizer"
+            :flat="false"
+            :searchable="true"
+            :disabled="disabled"
+            :no-children-text="'暂无子部门'"
+            :no-results-text="'无匹配结果'"
+            placeholder="请选择部门"
+            @select="onDepartmentSelect"
+        />
+    </div>
+</div>
+
+<script>
+// 等待依赖加载完成
+function waitForDependencies(callback) {
+    if (typeof Vue !== 'undefined' && typeof VueTreeselect !== 'undefined') {
+        callback();
+    } else {
+        setTimeout(() => waitForDependencies(callback), 100);
+    }
+}
+
+// 确保DOM加载完成后再初始化
+document.addEventListener('DOMContentLoaded', function() {
+    // 防止重复初始化
+    if (window.departmentSelectInitialized) {
+        return;
+    }
+    window.departmentSelectInitialized = true;
+    
+    waitForDependencies(initVue);
+});
+
+function initVue() {
+    // 注册Treeselect组件
+    Vue.component('treeselect', VueTreeselect.Treeselect);
+
+    // 初始化所有部门选择器
+    const elements = document.querySelectorAll('[data-initial-department]');
+
+    elements.forEach(el => {
+        const initialDepartment = el.dataset.initialDepartment === 'null' ? null : el.dataset.initialDepartment;
+        const initialDepartmentName = el.dataset.initialDepartmentName === 'null' ? null : el.dataset.initialDepartmentName;
+
+        // 创建Vue实例
+        new Vue({
+            el: '#' + el.id,
+            data: {
+                selectedDepartment: initialDepartment,
+                departmentOptions: [],
+                loading: true,
+                disabled: false,
+                initialDepartmentName: initialDepartmentName
+            },
+            mounted() {
+                this.loadDepartmentData();
+            },
+            methods: {
+                loadDepartmentData() {
+                    // 获取部门数据
+                    fetch('/department/tree')
+                        .then(response => response.json())
+                        .then(data => {
+                            const transformedData = this.transformDepartments(data);
+                            // 直接更新数据
+                            this.departmentOptions = transformedData;
+                            this.loading = false;
+                            
+                            // 使用 $nextTick 确保在数据更新后设置选中状态
+                            this.$nextTick(() => {
+                                if (this.initialDepartmentName) {
+                                    const dept = this.findDepartmentByName(this.departmentOptions, this.initialDepartmentName);
+                                    if (dept) {
+                                        this.selectedDepartment = dept.id;
+                                    }
+                                }
+                            });
+                        })
+                        .catch(error => {
+                            console.error('获取部门数据失败:', error);
+                            this.loading = false;
+                        });
+                },
+                // 根据名称查找部门
+                findDepartmentByName(departments, name) {
+                    for (const dept of departments) {
+                        if (dept.label === name) {
+                            return dept;
+                        }
+                        if (dept.children && dept.children.length > 0) {
+                            const found = this.findDepartmentByName(dept.children, name);
+                            if (found) return found;
+                        }
+                    }
+                    return null;
+                },
+                // 根据ID查找部门
+                findDepartmentById(departments, id) {
+                    for (const dept of departments) {
+                        if (dept.id === id) {
+                            return dept;
+                        }
+                        if (dept.children && dept.children.length > 0) {
+                            const found = this.findDepartmentById(dept.children, id);
+                            if (found) return found;
+                        }
+                    }
+                    return null;
+                },
+                // 转换部门数据为treeselect需要的格式
+                transformDepartments(departments) {
+                    const deptMap = new Map();
+                    const result = [];
+
+                    // 首先创建所有部门的映射
+                    departments.forEach(dept => {
+                        const node = {
+                            id: dept.id,
+                            label: dept.name,
+                            description: dept.description,
+                            children: []
+                        };
+                        deptMap.set(dept.id, node);
+                    });
+
+                    // 构建树形结构
+                    departments.forEach(dept => {
+                        const node = deptMap.get(dept.id);
+                        if (dept.parent_id === -1) {
+                            result.push(node);
+                        } else {
+                            const parent = deptMap.get(dept.parent_id);
+                            if (parent) {
+                                parent.children.push(node);
+                            }
+                        }
+                    });
+
+                    return result;
+                },
+                // 自定义数据格式化
+                normalizer(node) {
+                    return {
+                        id: node.id,
+                        label: node.label,
+                        children: node.children
+                    };
+                },
+                // 处理部门选择事件
+                onDepartmentSelect(node) {
+                    // 触发自定义事件
+                    const event = new CustomEvent('department-selected', {
+                        detail: {
+                            id: node.id,
+                            name: node.label,
+                            description: node.description
+                        }
+                    });
+                    document.dispatchEvent(event);
+                },
+                // 设置选中的部门
+                setDepartment(id) {
+                    this.selectedDepartment = id;
+                },
+                // 清空选择
+                clearSelection() {
+                    this.selectedDepartment = null;
+                },
+                // 禁用/启用选择器
+                setDisabled(disabled) {
+                    this.disabled = disabled;
+                }
+            }
+        });
+    });
+}
+</script>
+
+<style>
+[v-cloak] {
+    display: none;
+}
+.vue-treeselect {
+    font-size: 14px;
+}
+.vue-treeselect__control {
+    border: 1px solid #ddd;
+    border-radius: 4px;
+}
+.vue-treeselect__menu {
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+.vue-treeselect__option {
+    padding: 8px 12px;
+    cursor: pointer;
+}
+.vue-treeselect__option:hover {
+    background-color: #f5f5f5;
+}
+.vue-treeselect__label {
+    font-size: 14px;
+}
+.vue-treeselect__count {
+    color: #999;
+    font-size: 12px;
+}
+</style>
+{% endmacro %} 

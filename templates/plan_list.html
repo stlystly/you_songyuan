@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="mb-4">
+    <div class="d-flex justify-content-between align-items-center">
+        <h2>预案管理</h2>
+        <a href="{{ url_for('plan.add_plan') }}" class="btn btn-primary">
+            <i class="bi bi-plus-lg"></i> 添加预案
+        </a>
+    </div>
+</div>
+
+<div class="table-responsive">
+    <table class="table table-striped table-hover">
+        <thead>
+            <tr>
+                <th>预案名称</th>
+                <th>详细描述</th>
+                <th>最后编辑人</th>
+                <th>必须资质</th>
+                <th>最后修改时间</th>
+                <th>操作</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for plan in plans %}
+            <tr>
+                <td>{{ plan['name'] }}</td>
+                <td>{{ plan['description'] }}</td>
+                <td>{{ plan['editor_name'] }}</td>
+                <td>
+                    <a href="{{url_for('plan.get_plan_qualifications', id=plan['id'])}}" class="btn btn-info btn-sm py-0 px-2" style="font-size: 0.8rem;">
+                        <i class="bi"></i> 查看资质
+                    </a>
+                </td>
+                <td>{{ plan['updated_at'] }}</td>
+                <td>
+                    <div class="btn-group">
+                        <a href="{{ url_for('plan.edit_plan', plan_id=plan['id']) }}" class="btn btn-sm btn-outline-primary">编辑</a>
+                        <form method="POST" action="{{ url_for('plan.delete_plan', plan_id=plan['id']) }}" style="display: inline;">
+                            <button type="button" class="btn btn-sm btn-outline-danger" 
+                                    onclick="confirmDelete(this.form)">删除</button>
+                        </form>
+                    </div>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<script>
+function confirmDelete(form) {
+    if (confirm('确定要删除这个预案吗？')) {
+        form.submit();
+    }
+}
+</script>
+{% endblock %} 

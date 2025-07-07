@@ -1,0 +1,266 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="mb-4">
+    <div class="d-flex justify-content-between align-items-center">
+        <h2>部门管理</h2>
+        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addDepartmentModal">
+            <i class="bi bi-plus-lg"></i> 添加部门
+        </button>
+    </div>
+</div>
+
+<div class="table-responsive">
+    <table class="table table-striped table-hover">
+        <thead>
+            <tr>
+                <th>部门名称</th>
+                <th>部门代码</th>
+                <th>上级部门</th>
+                <th>描述</th>
+                <th>状态</th>
+                <th>操作</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for dept in departments %}
+            <tr>
+                <td>{{ dept.name }}</td>
+                <td>{{ dept.code }}</td>
+                <td>
+                    {% for parent in departments %}
+                        {% if parent.id == dept.parent_id %}
+                            {{ parent.name }}
+                        {% endif %}
+                    {% endfor %}
+                </td>
+                <td>{{ dept.description }}</td>
+                <td>
+                    {% if dept.status == 1 %}
+                        <span class="badge bg-success">启用</span>
+                    {% else %}
+                        <span class="badge bg-danger">禁用</span>
+                    {% endif %}
+                </td>
+                <td>
+                    <div class="btn-group">
+                        <button type="button" class="btn btn-sm btn-outline-primary" 
+                                data-bs-toggle="modal" 
+                                data-bs-target="#editDepartmentModal"
+                                data-id="{{ dept.id }}"
+                                data-name="{{ dept.name }}"
+                                data-code="{{ dept.code }}"
+                                data-parent-id="{{ dept.parent_id }}"
+                                data-description="{{ dept.description }}"
+                                data-status="{{ dept.status }}">
+                            <i class="bi bi-pencil"></i>
+                        </button>
+                        <button type="button" class="btn btn-sm btn-outline-danger"
+                                onclick="deleteDepartment('{{ dept.id }}')">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    </div>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<!-- 添加部门模态框 -->
+<div class="modal fade" id="addDepartmentModal" tabindex="-1" aria-labelledby="addDepartmentModalLabel">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="addDepartmentModalLabel">添加部门</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="关闭"></button>
+            </div>
+            <div class="modal-body">
+                <form id="addDepartmentForm">
+                    <div class="mb-3">
+                        <label class="form-label">部门名称</label>
+                        <input type="text" class="form-control" name="name" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">部门代码</label>
+                        <input type="text" class="form-control" name="code" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">上级部门</label>
+                        {% from "components/department_select.html" import render_department_select %}
+                        {{ render_department_select(instance_id='add-department-select') }}
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">描述</label>
+                        <textarea class="form-control" name="description" rows="3"></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">状态</label>
+                        <select class="form-select" name="status">
+                            <option value="1">启用</option>
+                            <option value="0">禁用</option>
+                        </select>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                <button type="button" class="btn btn-primary" onclick="addDepartment()">保存</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 编辑部门模态框 -->
+<div class="modal fade" id="editDepartmentModal" tabindex="-1" aria-labelledby="editDepartmentModalLabel">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="editDepartmentModalLabel">编辑部门</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="关闭"></button>
+            </div>
+            <div class="modal-body">
+                <form id="editDepartmentForm">
+                    <input type="hidden" name="id">
+                    <div class="mb-3">
+                        <label class="form-label">部门名称</label>
+                        <input type="text" class="form-control" name="name" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">部门代码</label>
+                        <input type="text" class="form-control" name="code" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">上级部门</label>
+                        {% from "components/department_select.html" import render_department_select %}
+                        {{ render_department_select(instance_id='edit-department-select') }}
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">描述</label>
+                        <textarea class="form-control" name="description" rows="3"></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">状态</label>
+                        <select class="form-select" name="status">
+                            <option value="1">启用</option>
+                            <option value="0">禁用</option>
+                        </select>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                <button type="button" class="btn btn-primary" onclick="updateDepartment()">保存</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// 添加部门
+function addDepartment() {
+    const form = document.getElementById('addDepartmentForm');
+    const formData = new FormData(form);
+    const data = Object.fromEntries(formData.entries());
+    
+    // 获取选中的部门ID
+    const addSelect = document.querySelector('#add-department-select').__vue__;
+    data.parent_id = addSelect && addSelect.selectedDepartment ? addSelect.selectedDepartment : -1;
+    
+    fetch('/department/add', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            location.reload();
+        } else {
+            alert(data.message || '添加失败');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('添加失败');
+    });
+}
+
+// 更新部门
+function updateDepartment() {
+    const form = document.getElementById('editDepartmentForm');
+    const formData = new FormData(form);
+    const data = Object.fromEntries(formData.entries());
+    
+    // 获取选中的部门ID
+    const editSelect = document.querySelector('#edit-department-select').__vue__;
+    data.parent_id = editSelect && editSelect.selectedDepartment ? editSelect.selectedDepartment : -1;
+    
+    fetch('/department/update', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            location.reload();
+        } else {
+            alert(data.message || '更新失败');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('更新失败');
+    });
+}
+
+// 删除部门
+function deleteDepartment(id) {
+    if (!confirm('确定要删除这个部门吗？')) {
+        return;
+    }
+    
+    fetch(`/department/delete/${id}`, {
+        method: 'POST'
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            location.reload();
+        } else {
+            alert(data.message || '删除失败');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('删除失败');
+    });
+}
+
+// 编辑部门模态框显示时填充数据
+document.getElementById('editDepartmentModal').addEventListener('show.bs.modal', function (event) {
+    const button = event.relatedTarget;
+    const form = document.getElementById('editDepartmentForm');
+    
+    form.elements.id.value = button.dataset.id;
+    form.elements.name.value = button.dataset.name;
+    form.elements.code.value = button.dataset.code;
+    form.elements.description.value = button.dataset.description;
+    form.elements.status.value = button.dataset.status;
+
+    // 设置上级部门
+    const editSelect = document.querySelector('#edit-department-select').__vue__;
+    if (editSelect) {
+        console.log('设置上级部门:', button.dataset.parentId);
+        editSelect.setDepartment(button.dataset.parentId);
+    } else {
+        console.error('未找到部门选择器实例');
+    }
+});
+</script>
+{% endblock %} 

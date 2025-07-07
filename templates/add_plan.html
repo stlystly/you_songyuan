@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% include "components/personnel_selector.html" %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title mb-0">新建预案</h3>
+                </div>
+                <div class="card-body">
+                    <form method="POST">
+                        <div class="mb-3">
+                            <label for="name" class="form-label">预案名称</label>
+                            <input type="text" class="form-control" id="name" name="name" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="description" class="form-label">详细描述</label>
+                            <textarea class="form-control" id="description" name="description" rows="5"></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label for="last_editor" class="form-label">最后编辑人</label>
+                            <div class="input-group">
+                                <input type="text" class="form-control" id="last_editor" disabled tabindex="-1">
+                                <button type="button" class="btn btn-outline-secondary" id="selectLastEditor">
+                                    <i class="bi bi-search"></i> 添加人员
+                                </button>
+                                <input type="hidden" name="last_editor" id="last_editor_id" required>
+                            </div>
+                        </div>
+                        <div class="d-flex justify-content-between">
+                            <a href="{{ url_for('plan.plan_list') }}" class="btn btn-secondary">返回</a>
+                            <button type="submit" class="btn btn-primary">创建预案</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // 初始化人员选择器
+    const personnelSelector = initPersonnelSelector({
+        onSelect: function(id, name) {
+            document.getElementById('last_editor_id').value = id;
+            document.getElementById('last_editor').value = name;
+        }
+    });
+    
+    // 点击选择最后编辑人按钮时显示模态框
+    document.getElementById('selectLastEditor').addEventListener('click', function() {
+        personnelSelector.show('last_editor');
+    });
+});
+</script>
+{% endblock %} 

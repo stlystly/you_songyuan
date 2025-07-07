@@ -1,0 +1,157 @@
+{% extends "base.html" %}
+
+{% block title %}添加人员{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <!-- Toast容器 -->
+    <div class="toast-container position-fixed top-0 end-0 p-3">
+        <div id="toast" class="toast" role="alert" aria-live="assertive" aria-atomic="true">
+            <div class="toast-header">
+                <strong class="me-auto" id="toast-title">提示</strong>
+                <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
+            </div>
+            <div class="toast-body" id="toast-message">
+            </div>
+        </div>
+    </div>
+
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title mb-0">添加人员</h3>
+                </div>
+                <div class="card-body">
+                    <form id="addPersonnelForm">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="name" class="form-label">姓名</label>
+                                    <input type="text" class="form-control" id="name" name="name" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="contact" class="form-label">联系方式</label>
+                                    <input type="text" class="form-control" id="contact" name="contact" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="employee_id" class="form-label">工号</label>
+                                    <input type="text" class="form-control" id="employee_id" name="employee_id" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="position" class="form-label">职位</label>
+                                    <input type="text" class="form-control" id="position" name="position" required>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">部门</label>
+                                    {% from 'components/department_select.html' import render_department_select %}
+                                    {{ render_department_select(instance_id='add-personnel-department-select') }}
+                                </div>
+                                <div class="mb-3">
+                                    <label for="emergency_contact" class="form-label">紧急联系人</label>
+                                    <input type="text" class="form-control" id="emergency_contact" name="emergency_contact">
+                                </div>
+                                <div class="mb-3">
+                                    <label for="emergency_phone" class="form-label">紧急联系电话</label>
+                                    <input type="text" class="form-control" id="emergency_phone" name="emergency_phone">
+                                </div>
+                                <div class="mb-3">
+                                    <label for="notes" class="form-label">备注</label>
+                                    <textarea class="form-control" id="notes" name="notes" rows="3"></textarea>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="d-flex justify-content-between mt-3">
+                            <a href="{{ url_for('personnel.personnel_list') }}" class="btn btn-secondary">返回</a>
+                            <button type="submit" class="btn btn-primary">保存</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // 初始化Toast
+    const toastEl = document.getElementById('toast');
+    const toast = new bootstrap.Toast(toastEl, {
+        autohide: true,
+        delay: 3000
+    });
+
+    // 显示Toast的函数
+    function showToast(title, message, type = 'success') {
+        const toastTitle = document.getElementById('toast-title');
+        const toastMessage = document.getElementById('toast-message');
+        const toast = document.getElementById('toast');
+        
+        // 设置标题和消息
+        toastTitle.textContent = title;
+        toastMessage.textContent = message;
+        
+        // 设置样式
+        toast.className = 'toast';
+        toast.classList.add(`bg-${type}`);
+        toast.classList.add('text-white');
+        
+        // 显示Toast
+        const bsToast = new bootstrap.Toast(toast);
+        bsToast.show();
+    }
+
+    // 监听部门选择事件
+    document.addEventListener('department-selected', function(event) {
+        const { id, name } = event.detail;
+        console.log('选中的部门:', name, 'ID:', id);
+    });
+
+    // 表单提交处理
+    document.getElementById('addPersonnelForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        // 获取表单数据
+        const formData = {
+            name: document.getElementById('name').value,
+            contact: document.getElementById('contact').value,
+            employee_id: document.getElementById('employee_id').value,
+            position: document.getElementById('position').value,
+            department_id: (() => {
+                const select = document.querySelector('#add-personnel-department-select');
+                return select && select.__vue__ && select.__vue__.selectedDepartment ? select.__vue__.selectedDepartment : -1;
+            })(),
+            emergency_contact: document.getElementById('emergency_contact').value,
+            emergency_phone: document.getElementById('emergency_phone').value,
+            notes: document.getElementById('notes').value
+        };
+
+        // 发送POST请求
+        fetch('/personnel/add', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(formData)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showToast('成功', '人员添加成功！', 'success');
+                setTimeout(() => {
+                    window.location.href = '/personnel';
+                }, 1500);
+            } else {
+                showToast('错误', data.message, 'danger');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showToast('错误', '添加失败，请稍后重试', 'danger');
+        });
+    });
+});
+</script>
+{% endblock %} 

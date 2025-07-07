@@ -1,0 +1,198 @@
+{% macro render_department_tree(onSelect=None) %}
+<div id="department-tree" v-cloak>
+    <div v-if="loading" class="text-center p-3">
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">加载中...</span>
+        </div>
+        <div>正在加载部门数据...</div>
+    </div>
+    <div v-else>
+        <treeselect
+            v-model="selectedEmployee"
+            :options="departmentOptions"
+            :multiple="false"
+            :clearable="true"
+            :disable-branch-nodes="true"
+            :show-count="true"
+            :normalizer="normalizer"
+            :flat="false"
+            :searchable="true"
+            :disabled="false"
+            :no-children-text="'暂无人员'"
+            :no-results-text="'无匹配结果'"
+            placeholder="请选择人员"
+            @select="onEmployeeSelect"
+        />
+    </div>
+</div>
+
+<script>
+// 等待依赖加载完成
+function waitForDependencies(callback) {
+    if (typeof Vue !== 'undefined' && typeof VueTreeselect !== 'undefined') {
+        callback();
+    } else {
+        setTimeout(() => waitForDependencies(callback), 100);
+    }
+}
+
+// 确保DOM加载完成后再初始化
+document.addEventListener('DOMContentLoaded', function() {
+    waitForDependencies(function() {
+        initVue();
+    });
+});
+
+function initVue() {
+    // 注册Treeselect组件
+    Vue.component('treeselect', VueTreeselect.Treeselect);
+
+    // 创建Vue实例
+    window.app = new Vue({
+        el: '#department-tree',
+        data: {
+            selectedEmployee: null,
+            departmentOptions: [],
+            loading: true
+        },
+        mounted() {
+            this.loadDepartmentData();
+        },
+        methods: {
+            loadDepartmentData() {
+                // 获取部门数据
+                fetch('/department/tree')
+                    .then(response => response.json())
+                    .then(data => {
+                        const transformedData = this.transformDepartments(data);
+                        this.departmentOptions = transformedData;
+                        this.loading = false;
+                    })
+                    .catch(error => {
+                        console.error('获取部门数据失败:', error);
+                        this.loading = false;
+                    });
+            },
+            // 转换部门数据为treeselect需要的格式
+            transformDepartments(departments) {
+                const deptMap = new Map();
+                const result = [];
+
+                // 首先创建所有部门的映射
+                departments.forEach(dept => {
+                    const node = {
+                        id: dept.id,
+                        label: dept.name,
+                        description: dept.description,
+                        children: []
+                    };
+                    deptMap.set(dept.id, node);
+                });
+
+                // 构建树形结构
+                departments.forEach(dept => {
+                    const node = deptMap.get(dept.id);
+                    if (dept.parent_id === -1) {
+                        result.push(node);
+                    } else {
+                        const parent = deptMap.get(dept.parent_id);
+                        if (parent) {
+                            parent.children.push(node);
+                        }
+                    }
+                });
+
+                // 获取真实员工数据
+                fetch('/personnel/list/tree/info')
+                    .then(response => response.json())
+                    .then(employees => {
+                // 将员工添加到对应的部门下
+                        employees.forEach(emp => {
+                    const dept = deptMap.get(emp.department_id);
+                    if (dept) {
+                        dept.children.push({
+                            id: `emp_${emp.id}`,  // 使用前缀区分员工ID
+                            label: emp.name,
+                            isEmployee: true,     // 标记这是一个员工节点
+                            departmentId: emp.department_id  // 添加部门ID
+                        });
+                    }
+                        });
+                    })
+                    .catch(error => {
+                        console.error('获取员工数据失败:', error);
+                });
+
+                return result;
+            },
+            // 自定义数据格式化
+            normalizer(node) {
+                return {
+                    id: node.id,
+                    label: node.label,
+                    children: node.children,
+                    isEmployee: node.isEmployee,  // 保留员工标记
+                    departmentId: node.departmentId  // 保留部门ID
+                };
+            },
+            // 处理人员选择事件
+            onEmployeeSelect(node) {
+                if (node.isEmployee) {
+                    const event = new CustomEvent('employee-selected', {
+                        detail: {
+                            id: node.id,
+                            name: node.label,
+                            departmentId: node.departmentId
+                        }
+                    });
+                    document.dispatchEvent(event);
+                    
+                    if (typeof window.updatePersonnelList === 'function') {
+                        window.updatePersonnelList(node.id.replace('emp_', ''));
+                    }
+                }
+            }
+        }
+    });
+}
+</script>
+
+<style>
+[v-cloak] {
+    display: none;
+}
+.vue-treeselect {
+    font-size: 14px;
+}
+.vue-treeselect__control {
+    border: 1px solid #ddd;
+    border-radius: 4px;
+}
+.vue-treeselect__menu {
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+.vue-treeselect__option {
+    padding: 8px 12px;
+    cursor: pointer;
+}
+.vue-treeselect__option:hover {
+    background-color: #f5f5f5;
+}
+.vue-treeselect__label {
+    font-size: 14px;
+}
+.vue-treeselect__count {
+    color: #999;
+    font-size: 12px;
+}
+/* 员工节点样式 */
+.vue-treeselect__option[data-is-employee="true"] {
+    color: #666;
+    font-style: italic;
+}
+</style>
+{% endmacro %}
+
+{{ render_department_tree() }}

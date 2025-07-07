@@ -1,0 +1,143 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="mb-4">
+    <div class="d-flex justify-content-between align-items-center">
+        <h2>预案资质列表</h2>
+        <div>
+            <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addQualificationModal">
+                <i class="bi bi-plus-lg"></i> 添加资质
+            </button>
+            <a href="{{ url_for('plan.plan_list') }}" class="btn btn-secondary">
+                <i class="bi bi-arrow-left"></i> 返回预案列表
+            </a>
+        </div>
+    </div>
+</div>
+
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-striped table-hover">
+                            <thead>
+                                <tr>
+                                    <th>资质</th>
+                                    <th>创建时间</th>
+                                    <th>更新时间</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% if qualifications %}
+                                    {% for qual in qualifications %}
+                                    <tr>
+                                        <td>{{ qual.title }}</td>
+                                        <td>{{ qual.created_at }}</td>
+                                        <td>{{ qual.updated_at }}</td>
+                                        <td>
+                                            <div class="btn-group">
+                                                <button type="button" class="btn btn-sm btn-outline-danger" onclick="deleteQualification({{ qual.id }})">
+                                                    <i class="bi bi-trash"></i> 删除
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                {% else %}
+                                    <tr>
+                                        <td colspan="4" class="text-center">暂无资质</td>
+                                    </tr>
+                                {% endif %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 添加资质模态框 -->
+<div class="modal fade" id="addQualificationModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">添加资质</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="addQualificationForm">
+                    <div class="mb-3">
+                        <label for="qualificationTitle" class="form-label">资质标题</label>
+                        <input type="text" class="form-control" id="qualificationTitle" name="title" required>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">取消</button>
+                <button type="button" class="btn btn-primary" onclick="addQualification()">
+                    <i class="bi bi-save"></i> 保存
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// 添加资质
+async function addQualification() {
+    const title = document.getElementById('qualificationTitle').value;
+    
+    if (!title) {
+        alert('请输入资质标题');
+        return;
+    }
+    
+    try {
+        const response = await fetch(`/plan/{{ plan_id }}/qualifications`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                title: title
+            })
+        });
+        
+        const result = await response.json();
+        if (result.success) {
+            window.location.reload();
+        } else {
+            alert('添加失败: ' + result.message);
+        }
+    } catch (error) {
+        alert('添加失败: ' + error.message);
+    }
+}
+
+// 删除资质
+async function deleteQualification(id) {
+    if (!confirm('确定要删除这个资质吗？')) {
+        return;
+    }
+    
+    try {
+        const response = await fetch(`/plan/{{ plan_id }}/qualifications/${id}`, {
+            method: 'DELETE'
+        });
+        
+        const result = await response.json();
+        if (result.success) {
+            window.location.reload();
+        } else {
+            alert('删除失败: ' + result.message);
+        }
+    } catch (error) {
+        alert('删除失败: ' + error.message);
+    }
+}
+</script>
+{% endblock %} 

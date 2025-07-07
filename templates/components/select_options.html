@@ -1,0 +1,23 @@
+{% macro frequency_options(selected_value=None) %}
+    <option value="每周" {% if selected_value == '每周' %}selected{% endif %}>每周</option>
+    <option value="每月" {% if selected_value == '每月' %}selected{% endif %}>每月</option>
+    <option value="每季度" {% if selected_value == '每季度' %}selected{% endif %}>每季度</option>
+    <option value="每半年" {% if selected_value == '每半年' %}selected{% endif %}>每半年</option>
+    <option value="每年" {% if selected_value == '每年' %}selected{% endif %}>每年</option>
+    <option value="临时" {% if selected_value == '临时' %}selected{% endif %}>临时</option>
+{% endmacro %}
+
+{% macro status_options(selected_value=None) %}
+    <option value="pending" {% if selected_value == 'pending' %}selected{% endif %}>待执行</option>
+    <option value="in_progress" {% if selected_value == 'in_progress' %}selected{% endif %}>进行中</option>
+    <option value="completed" {% if selected_value == 'completed' %}selected{% endif %}>已完成</option>
+    <option value="cancelled" {% if selected_value == 'cancelled' %}selected{% endif %}>已取消</option>
+{% endmacro %}
+
+{% macro status_display(status) %}
+    {% if status == 'pending' %}待执行
+    {% elif status == 'in_progress' %}进行中
+    {% elif status == 'completed' %}已完成
+    {% elif status == 'cancelled' %}已取消
+    {% else %}{{ status }}{% endif %}
+{% endmacro %} 
