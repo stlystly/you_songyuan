@@ -9,7 +9,6 @@ from db.tools import sanitize_search_input
 bp = Blueprint('personnel', __name__, url_prefix='/personnel')
 
 @bp.route('/')
-@login_required
 def personnel_list():
     conn = get_db_connection()
     cursor = conn.cursor()

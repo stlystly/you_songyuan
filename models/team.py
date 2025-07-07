@@ -8,7 +8,6 @@ from db.tools import sanitize_search_input
 bp = Blueprint('team', __name__, url_prefix='/team')
 
 @bp.route('/teams')
-@login_required
 def team_list():
     conn = get_db_connection()
     cursor = conn.cursor()

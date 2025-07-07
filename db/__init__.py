@@ -15,16 +15,16 @@ pool = PooledDB(
     blocking=True,    # 连接池满时是否阻塞等待
     maxusage=None,    # 一个连接最多被重复使用的次数，None表示无限制
     setsession=[],    # 开始会话前执行的命令列表
-    ping=0,           # ping MySQL服务端，检查是否服务可用
+    ping=1,           # ping MySQL服务端，检查是否服务可用
 )
 
 def get_db_connection():
-    if 'db' not in g:
-        g.db = pool.connection()
-    return g.db
-    # conn = sqlite3.connect('app.db', check_same_thread=False)
-    # conn.row_factory = sqlite3.Row
-    # return conn
+    # if 'db' not in g:
+    #     g.db = pool.connection()
+    # return g.db
+    conn = sqlite3.connect('app.db', check_same_thread=False)
+    conn.row_factory = sqlite3.Row
+    return conn
 
 def close_db(e=None):
 

@@ -9,7 +9,6 @@ bp = Blueprint('drill', __name__, url_prefix='/drill')
 
 
 @bp.route('/list')
-@login_required
 def drill_list():
     conn = get_db_connection()
     cursor = conn.cursor()

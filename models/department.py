@@ -5,7 +5,6 @@ from db import get_db_connection
 bp = Blueprint('department', __name__, url_prefix='/department')
 
 @bp.route('/')
-@login_required
 def department_list():
     conn = get_db_connection()
     cursor = conn.cursor()
