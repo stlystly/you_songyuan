@@ -10,36 +10,69 @@ bp = Blueprint('drill', __name__, url_prefix='/drill')
 
 @bp.route('/list')
 def drill_list():
+    q = request.args.get('q', '').strip()
     conn = get_db_connection()
     cursor = conn.cursor()
-    drills = cursor.execute(
-        '''
-        SELECT
-            d.id,
-            d.name,
-            d.start_date,
-            d.end_date,
-            d.frequency,
-            d.status,
-            d.created_at,
-            d.updated_at,
-            d.description,
-            p1.name as executor_name,
-            p2.name as creator_name,
-            d.executor as executor_id,
-            d.creator as creator_id,
-            t.group_name as team_name,
-            d.team_id,
-            pl.name as plan_name,
-            d.plan_id
-        FROM drills d
-        LEFT JOIN personnel p1 ON d.executor = p1.id
-        LEFT JOIN personnel p2 ON d.creator = p2.id
-        LEFT JOIN teams t ON d.team_id = t.id
-        LEFT JOIN plans pl ON d.plan_id = pl.id
-        ORDER BY d.created_at DESC
-        '''
-    ).fetchall()
+    if q:
+        drills = cursor.execute(
+            '''
+            SELECT
+                d.id,
+                d.name,
+                d.start_date,
+                d.end_date,
+                d.frequency,
+                d.status,
+                d.created_at,
+                d.updated_at,
+                d.description,
+                p1.name as executor_name,
+                p2.name as creator_name,
+                d.executor as executor_id,
+                d.creator as creator_id,
+                t.group_name as team_name,
+                d.team_id,
+                pl.name as plan_name,
+                d.plan_id
+            FROM drills d
+            LEFT JOIN personnel p1 ON d.executor = p1.id
+            LEFT JOIN personnel p2 ON d.creator = p2.id
+            LEFT JOIN teams t ON d.team_id = t.id
+            LEFT JOIN plans pl ON d.plan_id = pl.id
+            WHERE d.name LIKE ?
+            ORDER BY d.created_at DESC
+            ''',
+            (f'%{q}%',)
+        ).fetchall()
+    else:
+        drills = cursor.execute(
+            '''
+            SELECT
+                d.id,
+                d.name,
+                d.start_date,
+                d.end_date,
+                d.frequency,
+                d.status,
+                d.created_at,
+                d.updated_at,
+                d.description,
+                p1.name as executor_name,
+                p2.name as creator_name,
+                d.executor as executor_id,
+                d.creator as creator_id,
+                t.group_name as team_name,
+                d.team_id,
+                pl.name as plan_name,
+                d.plan_id
+            FROM drills d
+            LEFT JOIN personnel p1 ON d.executor = p1.id
+            LEFT JOIN personnel p2 ON d.creator = p2.id
+            LEFT JOIN teams t ON d.team_id = t.id
+            LEFT JOIN plans pl ON d.plan_id = pl.id
+            ORDER BY d.created_at DESC
+            '''
+        ).fetchall()
     cursor.close()
     conn.close()
     return render_template('drill_list.html', drills=drills)
