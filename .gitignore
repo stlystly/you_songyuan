@@ -1,0 +1,40 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.pyc
+
+# 虚拟环境
+venv/
+env/
+ENV/
+.venv/
+
+# 数据库
+*.db
+*.sqlite3
+
+# 日志
+*.log
+logs/
+
+# IDE
+.vscode/
+.idea/
+*.sublime-workspace
+*.sublime-project
+
+# 系统文件
+.DS_Store
+Thumbs.db
+
+# 打包相关
+dist/
+build/
+*.egg-info/
+*.spec
+
+# 其他
+*.bak
+*.swp
